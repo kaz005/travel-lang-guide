@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, f
 from models import db, TouristSpot, Admin
 from functools import wraps
 import json
+from datetime import timedelta
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # Fixed secret key for session management
+app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY')
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 db.init_app(app)
 
 def init_db():
@@ -51,7 +54,19 @@ def admin_required(f):
             logger.warning("Unauthorized access attempt to admin route")
             flash('Please log in to access this page', 'warning')
             return redirect(url_for('admin_login'))
-        logger.debug(f"Admin access granted for user ID: {session['admin_id']}")
+        try:
+            admin = Admin.query.get(session['admin_id'])
+            if not admin:
+                logger.error(f"Invalid admin ID in session: {session['admin_id']}")
+                session.clear()
+                flash('Session invalid. Please login again.', 'error')
+                return redirect(url_for('admin_login'))
+            logger.debug(f"Admin access granted for user ID: {session['admin_id']}")
+        except Exception as e:
+            logger.error(f"Error validating admin session: {str(e)}")
+            session.clear()
+            flash('An error occurred. Please login again.', 'error')
+            return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -93,6 +108,8 @@ def admin_login():
             admin = Admin.query.filter_by(username=username).first()
             
             if admin and admin.check_password(password):
+                # Set session as permanent with configured lifetime
+                session.permanent = True
                 session['admin_id'] = admin.id
                 logger.debug(f"Login successful for admin ID: {admin.id}")
                 flash('Login successful!', 'success')
@@ -123,44 +140,50 @@ def admin_dashboard():
 @admin_required
 def admin_create_spot():
     if request.method == 'POST':
-        spot_data = {
-            'name': {
-                'en': request.form['name_en'],
-                'ja': request.form['name_ja'],
-                'zh': request.form['name_zh']
-            },
-            'description': {
-                'en': request.form['desc_en'],
-                'ja': request.form['desc_ja'],
-                'zh': request.form['desc_zh']
-            },
-            'coordinates': {
-                'lat': float(request.form['lat']),
-                'lng': float(request.form['lng'])
-            },
-            'images': []
-        }
-        
-        # Process images
-        urls = request.form.getlist('image_urls[]')
-        captions_en = request.form.getlist('image_captions_en[]')
-        captions_ja = request.form.getlist('image_captions_ja[]')
-        captions_zh = request.form.getlist('image_captions_zh[]')
-        
-        for i in range(len(urls)):
-            spot_data['images'].append({
-                'url': urls[i],
-                'caption': {
-                    'en': captions_en[i],
-                    'ja': captions_ja[i],
-                    'zh': captions_zh[i]
-                }
-            })
-        
-        spot = TouristSpot.from_json(spot_data)
-        db.session.add(spot)
-        db.session.commit()
-        return redirect(url_for('admin_dashboard'))
+        try:
+            spot_data = {
+                'name': {
+                    'en': request.form['name_en'],
+                    'ja': request.form['name_ja'],
+                    'zh': request.form['name_zh']
+                },
+                'description': {
+                    'en': request.form['desc_en'],
+                    'ja': request.form['desc_ja'],
+                    'zh': request.form['desc_zh']
+                },
+                'coordinates': {
+                    'lat': float(request.form['lat']),
+                    'lng': float(request.form['lng'])
+                },
+                'images': []
+            }
+            
+            # Process images
+            urls = request.form.getlist('image_urls[]')
+            captions_en = request.form.getlist('image_captions_en[]')
+            captions_ja = request.form.getlist('image_captions_ja[]')
+            captions_zh = request.form.getlist('image_captions_zh[]')
+            
+            for i in range(len(urls)):
+                spot_data['images'].append({
+                    'url': urls[i],
+                    'caption': {
+                        'en': captions_en[i],
+                        'ja': captions_ja[i],
+                        'zh': captions_zh[i]
+                    }
+                })
+            
+            spot = TouristSpot.from_json(spot_data)
+            db.session.add(spot)
+            db.session.commit()
+            flash('Tourist spot created successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        except Exception as e:
+            logger.error(f"Error creating tourist spot: {str(e)}")
+            flash('An error occurred while creating the tourist spot', 'error')
+            db.session.rollback()
     
     return render_template('admin/spot_form.html', spot=None)
 
@@ -170,40 +193,46 @@ def admin_edit_spot(spot_id):
     spot = TouristSpot.query.get_or_404(spot_id)
     
     if request.method == 'POST':
-        spot.name = {
-            'en': request.form['name_en'],
-            'ja': request.form['name_ja'],
-            'zh': request.form['name_zh']
-        }
-        spot.description = {
-            'en': request.form['desc_en'],
-            'ja': request.form['desc_ja'],
-            'zh': request.form['desc_zh']
-        }
-        spot.coordinates = {
-            'lat': float(request.form['lat']),
-            'lng': float(request.form['lng'])
-        }
-        
-        # Process images
-        urls = request.form.getlist('image_urls[]')
-        captions_en = request.form.getlist('image_captions_en[]')
-        captions_ja = request.form.getlist('image_captions_ja[]')
-        captions_zh = request.form.getlist('image_captions_zh[]')
-        
-        spot.images = []
-        for i in range(len(urls)):
-            spot.images.append({
-                'url': urls[i],
-                'caption': {
-                    'en': captions_en[i],
-                    'ja': captions_ja[i],
-                    'zh': captions_zh[i]
-                }
-            })
-        
-        db.session.commit()
-        return redirect(url_for('admin_dashboard'))
+        try:
+            spot.name = {
+                'en': request.form['name_en'],
+                'ja': request.form['name_ja'],
+                'zh': request.form['name_zh']
+            }
+            spot.description = {
+                'en': request.form['desc_en'],
+                'ja': request.form['desc_ja'],
+                'zh': request.form['desc_zh']
+            }
+            spot.coordinates = {
+                'lat': float(request.form['lat']),
+                'lng': float(request.form['lng'])
+            }
+            
+            # Process images
+            urls = request.form.getlist('image_urls[]')
+            captions_en = request.form.getlist('image_captions_en[]')
+            captions_ja = request.form.getlist('image_captions_ja[]')
+            captions_zh = request.form.getlist('image_captions_zh[]')
+            
+            spot.images = []
+            for i in range(len(urls)):
+                spot.images.append({
+                    'url': urls[i],
+                    'caption': {
+                        'en': captions_en[i],
+                        'ja': captions_ja[i],
+                        'zh': captions_zh[i]
+                    }
+                })
+            
+            db.session.commit()
+            flash('Tourist spot updated successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        except Exception as e:
+            logger.error(f"Error updating tourist spot: {str(e)}")
+            flash('An error occurred while updating the tourist spot', 'error')
+            db.session.rollback()
     
     return render_template('admin/spot_form.html', spot=spot.to_dict())
 
@@ -221,29 +250,44 @@ def get_spot(spot_id):
 @app.route('/api/spots', methods=['POST'])
 @admin_required
 def create_spot():
-    data = request.get_json()
-    spot = TouristSpot.from_json(data)
-    db.session.add(spot)
-    db.session.commit()
-    return jsonify(spot.to_dict()), 201
+    try:
+        data = request.get_json()
+        spot = TouristSpot.from_json(data)
+        db.session.add(spot)
+        db.session.commit()
+        return jsonify(spot.to_dict()), 201
+    except Exception as e:
+        logger.error(f"API error creating spot: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create spot'}), 500
 
 @app.route('/api/spots/<int:spot_id>', methods=['PUT'])
 @admin_required
 def update_spot(spot_id):
-    spot = TouristSpot.query.get_or_404(spot_id)
-    data = request.get_json()
-    for key, value in data.items():
-        setattr(spot, key, value)
-    db.session.commit()
-    return jsonify(spot.to_dict())
+    try:
+        spot = TouristSpot.query.get_or_404(spot_id)
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(spot, key, value)
+        db.session.commit()
+        return jsonify(spot.to_dict())
+    except Exception as e:
+        logger.error(f"API error updating spot: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update spot'}), 500
 
 @app.route('/api/spots/<int:spot_id>', methods=['DELETE'])
 @admin_required
 def delete_spot(spot_id):
-    spot = TouristSpot.query.get_or_404(spot_id)
-    db.session.delete(spot)
-    db.session.commit()
-    return '', 204
+    try:
+        spot = TouristSpot.query.get_or_404(spot_id)
+        db.session.delete(spot)
+        db.session.commit()
+        return '', 204
+    except Exception as e:
+        logger.error(f"API error deleting spot: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete spot'}), 500
 
 if __name__ == '__main__':
     init_db()
