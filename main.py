@@ -23,7 +23,7 @@ def init_db():
 @app.route('/')
 def index():
     lang = request.args.get('lang', 'en')
-    spots = TouristSpot.query.all()
+    spots = [spot.to_dict() for spot in TouristSpot.query.all()]
     return render_template('index.html', spots=spots, current_lang=lang)
 
 @app.route('/spot/<int:spot_id>')
@@ -35,7 +35,7 @@ def spot_detail(spot_id):
 @app.route('/map')
 def map_view():
     lang = request.args.get('lang', 'en')
-    spots = TouristSpot.query.all()
+    spots = [spot.to_dict() for spot in TouristSpot.query.all()]
     return render_template('map.html', spots=spots, current_lang=lang)
 
 # API Endpoints
