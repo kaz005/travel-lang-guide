@@ -32,7 +32,7 @@ def init_db():
 @app.route('/')
 def index():
     lang = request.args.get('lang', 'en')
-    spots = [spot.to_dict() for spot in TouristSpot.query.all()]
+    spots = [spot.to_dict() for spot in TouristSpot.query.order_by(TouristSpot.id).all()]
     return render_template('index.html', spots=spots, current_lang=lang)
 
 @app.route('/spot/<int:spot_id>')
@@ -44,13 +44,13 @@ def spot_detail(spot_id):
 @app.route('/map')
 def map_view():
     lang = request.args.get('lang', 'en')
-    spots = [spot.to_dict() for spot in TouristSpot.query.all()]
+    spots = [spot.to_dict() for spot in TouristSpot.query.order_by(TouristSpot.id).all()]
     return render_template('map.html', spots=spots, current_lang=lang)
 
 # Admin routes
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    spots = [spot.to_dict() for spot in TouristSpot.query.all()]
+    spots = [spot.to_dict() for spot in TouristSpot.query.order_by(TouristSpot.id).all()]
     return render_template('admin/dashboard.html', spots=spots)
 
 @app.route('/admin/spots/create', methods=['GET', 'POST'])
@@ -154,7 +154,7 @@ def admin_edit_spot(spot_id):
 # API Endpoints
 @app.route('/api/spots', methods=['GET'])
 def get_spots():
-    spots = TouristSpot.query.all()
+    spots = TouristSpot.query.order_by(TouristSpot.id).all()
     return jsonify([spot.to_dict() for spot in spots])
 
 @app.route('/api/spots/<int:spot_id>', methods=['GET'])
