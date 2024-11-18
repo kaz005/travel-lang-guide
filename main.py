@@ -1,18 +1,25 @@
 import os
+import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
 from models import db, TouristSpot, Admin
 from functools import wraps
 import json
 
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.urandom(24)  # For session management
+app.config['SECRET_KEY'] = 'your-secret-key-here'  # Fixed secret key for session management
 db.init_app(app)
 
 def init_db():
     with app.app_context():
         db.create_all()
+        logger.debug("Database tables created")
+        
         # Load initial data if the database is empty
         if TouristSpot.query.count() == 0:
             with open('static/data/spots.json', 'r', encoding='utf-8') as file:
@@ -21,19 +28,30 @@ def init_db():
                     spot = TouristSpot.from_json(spot_data)
                     db.session.add(spot)
                 db.session.commit()
+            logger.debug("Initial tourist spots data loaded")
         
         # Create default admin if none exists
-        if Admin.query.count() == 0:
-            admin = Admin(username='admin')
-            admin.set_password('admin')  # Default password, should be changed
-            db.session.add(admin)
-            db.session.commit()
+        try:
+            if Admin.query.count() == 0:
+                logger.debug("Creating default admin user")
+                admin = Admin()
+                admin.username = 'admin'
+                admin.set_password('admin')
+                db.session.add(admin)
+                db.session.commit()
+                logger.debug("Default admin user created successfully")
+        except Exception as e:
+            logger.error(f"Error creating admin user: {str(e)}")
+            db.session.rollback()
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_id' not in session:
+            logger.warning("Unauthorized access attempt to admin route")
+            flash('Please log in to access this page', 'warning')
             return redirect(url_for('admin_login'))
+        logger.debug(f"Admin access granted for user ID: {session['admin_id']}")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -58,17 +76,41 @@ def map_view():
 # Admin routes
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
+    # Clear any existing session
+    session.clear()
+    
     if request.method == 'POST':
-        admin = Admin.query.filter_by(username=request.form['username']).first()
-        if admin and admin.check_password(request.form['password']):
-            session['admin_id'] = admin.id
-            return redirect(url_for('admin_dashboard'))
-        flash('Invalid username or password', 'error')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        logger.debug(f"Login attempt for username: {username}")
+        
+        if not username or not password:
+            flash('Please provide both username and password', 'error')
+            return render_template('admin/login.html')
+        
+        try:
+            admin = Admin.query.filter_by(username=username).first()
+            
+            if admin and admin.check_password(password):
+                session['admin_id'] = admin.id
+                logger.debug(f"Login successful for admin ID: {admin.id}")
+                flash('Login successful!', 'success')
+                return redirect(url_for('admin_dashboard'))
+            else:
+                logger.warning(f"Failed login attempt for username: {username}")
+                flash('Invalid username or password', 'error')
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            flash('An error occurred during login', 'error')
+    
     return render_template('admin/login.html')
 
 @app.route('/admin/logout')
 def admin_logout():
-    session.pop('admin_id', None)
+    logger.debug(f"Logout for admin ID: {session.get('admin_id')}")
+    session.clear()
+    flash('You have been logged out', 'info')
     return redirect(url_for('admin_login'))
 
 @app.route('/admin/dashboard')
