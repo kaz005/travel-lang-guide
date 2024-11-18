@@ -17,7 +17,38 @@
 
     <div class="col-12 col-lg-8 mx-auto">
         <div class="card">
-            <img src="{{ spot.image }}" class="card-img-top" alt="{{ spot.name[current_lang] }}">
+            <div id="spotGallery" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    {% for image in spot.images %}
+                        <button type="button" 
+                                data-bs-target="#spotGallery" 
+                                data-bs-slide-to="{{ loop.index0 }}" 
+                                {% if loop.first %}class="active"{% endif %}
+                                aria-label="Slide {{ loop.index }}">
+                        </button>
+                    {% endfor %}
+                </div>
+                <div class="carousel-inner">
+                    {% for image in spot.images %}
+                        <div class="carousel-item {% if loop.first %}active{% endif %}">
+                            <img src="{{ image.url }}" 
+                                 class="d-block w-100" 
+                                 alt="{{ image.caption[current_lang] }}">
+                            <div class="carousel-caption d-none d-md-block">
+                                <p class="mb-0">{{ image.caption[current_lang] }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#spotGallery" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#spotGallery" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+            </div>
             <div class="card-body">
                 <h2 class="card-title">{{ spot.name[current_lang] }}</h2>
                 <p class="card-text">{{ spot.description[current_lang] }}</p>

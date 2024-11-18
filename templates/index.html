@@ -16,7 +16,7 @@
     <div class="col">
         <div class="card h-100 spot-card">
             <div class="spot-number">{{ spot.id }}</div>
-            <img src="{{ spot.image }}" class="card-img-top" alt="{{ spot.name[current_lang] }}">
+            <img src="{{ spot.images[0].url }}" class="card-img-top" alt="{{ spot.name[current_lang] }}">
             <div class="card-body">
                 <h5 class="card-title">{{ spot.name[current_lang] }}</h5>
                 <p class="card-text">{{ spot.description[current_lang] }}</p>

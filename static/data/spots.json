@@ -11,7 +11,32 @@
       "ja": "港区芝公園にある通信・観光施設。日本のシンボル的な建造物。",
       "zh": "位于东京港区芝公园的通信和观光设施，是日本的标志性建筑。"
     },
-    "image": "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc"
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc",
+        "caption": {
+          "en": "Tokyo Tower at night",
+          "ja": "夜の東京タワー",
+          "zh": "夜晚的东京塔"
+        }
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1490806843957-31f4c9a91c65",
+        "caption": {
+          "en": "Tokyo Tower during daytime",
+          "ja": "昼間の東京タワー",
+          "zh": "日间的东京塔"
+        }
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1542051841857-5f90071e7989",
+        "caption": {
+          "en": "Tokyo Tower view from street",
+          "ja": "通りから見た東京タワー",
+          "zh": "从街道看东京塔"
+        }
+      }
+    ]
   },
   {
     "id": 2,
@@ -25,6 +50,31 @@
       "ja": "日本最高峰の山。活火山であり、日本の象徴的な存在。",
       "zh": "日本最高的山峰，是一座活火山，是日本的象征。"
     },
-    "image": "https://images.unsplash.com/photo-1528164344705-47542687000d"
+    "images": [
+      {
+        "url": "https://images.unsplash.com/photo-1528164344705-47542687000d",
+        "caption": {
+          "en": "Mount Fuji snow-capped peak",
+          "ja": "雪化粧をした富士山",
+          "zh": "积雪的富士山峰"
+        }
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1565618754154-c8011e5df2a6",
+        "caption": {
+          "en": "Mount Fuji with cherry blossoms",
+          "ja": "桜と富士山",
+          "zh": "樱花和富士山"
+        }
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1578271887552-5ac3a72752bc",
+        "caption": {
+          "en": "Mount Fuji reflection in lake",
+          "ja": "湖に映る富士山",
+          "zh": "湖中倒映的富士山"
+        }
+      }
+    ]
   }
 ]
