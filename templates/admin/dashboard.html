@@ -3,6 +3,9 @@
 {% block content %}
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+            <i class="fas fa-home"></i> Back to Homepage
+        </a>
         <h2>Tourist Spots Management</h2>
         <a href="{{ url_for('admin_create_spot') }}" class="btn btn-success">
             <i class="fas fa-plus"></i> Add New Spot
