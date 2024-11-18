@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Tourist Spots Management</h2>
+        <a href="{{ url_for('admin_create_spot') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Add New Spot
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name (EN)</th>
+                    <th>Name (JA)</th>
+                    <th>Name (ZH)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for spot in spots %}
+                <tr>
+                    <td>{{ spot.id }}</td>
+                    <td>{{ spot.name.en }}</td>
+                    <td>{{ spot.name.ja }}</td>
+                    <td>{{ spot.name.zh }}</td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('admin_edit_spot', spot_id=spot.id) }}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm" 
+                                    onclick="confirmDelete({{ spot.id }})">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function confirmDelete(spotId) {
+    if (confirm('Are you sure you want to delete this spot?')) {
+        fetch(`/api/spots/${spotId}`, {
+            method: 'DELETE'
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

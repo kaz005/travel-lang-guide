@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">
+                        {% if spot %}Edit Tourist Spot{% else %}Create New Tourist Spot{% endif %}
+                    </h2>
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Name (English)</label>
+                                <input type="text" class="form-control" name="name_en" 
+                                       value="{{ spot.name.en if spot else '' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Name (Japanese)</label>
+                                <input type="text" class="form-control" name="name_ja" 
+                                       value="{{ spot.name.ja if spot else '' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Name (Chinese)</label>
+                                <input type="text" class="form-control" name="name_zh" 
+                                       value="{{ spot.name.zh if spot else '' }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Description (English)</label>
+                                <textarea class="form-control" name="desc_en" rows="3" required>{{ spot.description.en if spot else '' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Description (Japanese)</label>
+                                <textarea class="form-control" name="desc_ja" rows="3" required>{{ spot.description.ja if spot else '' }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Description (Chinese)</label>
+                                <textarea class="form-control" name="desc_zh" rows="3" required>{{ spot.description.zh if spot else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" class="form-control" name="lat" step="any"
+                                       value="{{ spot.coordinates.lat if spot else '' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" class="form-control" name="lng" step="any"
+                                       value="{{ spot.coordinates.lng if spot else '' }}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Images</label>
+                            <div id="imageInputs">
+                                {% if spot and spot.images %}
+                                    {% for image in spot.images %}
+                                    <div class="row mb-2">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="image_urls[]" 
+                                                   value="{{ image.url }}" placeholder="Image URL" required>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_en[]" 
+                                                           value="{{ image.caption.en }}" placeholder="Caption (EN)" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_ja[]" 
+                                                           value="{{ image.caption.ja }}" placeholder="Caption (JA)" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_zh[]" 
+                                                           value="{{ image.caption.zh }}" placeholder="Caption (ZH)" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="row mb-2">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" name="image_urls[]" 
+                                                   placeholder="Image URL" required>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_en[]" 
+                                                           placeholder="Caption (EN)" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_ja[]" 
+                                                           placeholder="Caption (JA)" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="text" class="form-control" name="image_captions_zh[]" 
+                                                           placeholder="Caption (ZH)" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" onclick="addImageInput()">
+                                <i class="fas fa-plus"></i> Add Image
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if spot %}Update{% else %}Create{% endif %} Spot
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addImageInput() {
+    const template = `
+        <div class="row mb-2">
+            <div class="col-md-4">
+                <input type="text" class="form-control" name="image_urls[]" 
+                       placeholder="Image URL" required>
+            </div>
+            <div class="col-md-8">
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="image_captions_en[]" 
+                               placeholder="Caption (EN)" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="image_captions_ja[]" 
+                               placeholder="Caption (JA)" required>
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="image_captions_zh[]" 
+                               placeholder="Caption (ZH)" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('imageInputs').insertAdjacentHTML('beforeend', template);
+}
+</script>
+{% endblock %}
