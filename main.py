@@ -22,5 +22,11 @@ def spot_detail(spot_id):
         return redirect(url_for('index'))
     return render_template('detail.html', spot=spot, current_lang=lang)
 
+@app.route('/map')
+def map_view():
+    lang = request.args.get('lang', 'en')
+    spots = load_spots_data()
+    return render_template('map.html', spots=spots, current_lang=lang)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

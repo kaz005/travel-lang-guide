@@ -11,6 +11,10 @@
       "ja": "港区芝公園にある通信・観光施設。日本のシンボル的な建造物。",
       "zh": "位于东京港区芝公园的通信和观光设施，是日本的标志性建筑。"
     },
+    "coordinates": {
+      "lat": 35.6586,
+      "lng": 139.7454
+    },
     "images": [
       {
         "url": "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc",
@@ -49,6 +53,10 @@
       "en": "Japan's tallest peak and most iconic mountain, an active stratovolcano.",
       "ja": "日本最高峰の山。活火山であり、日本の象徴的な存在。",
       "zh": "日本最高的山峰，是一座活火山，是日本的象征。"
+    },
+    "coordinates": {
+      "lat": 35.3606,
+      "lng": 138.7274
     },
     "images": [
       {

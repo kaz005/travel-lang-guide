@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <a href="{{ url_for('index', lang=current_lang) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            {% if current_lang == 'ja' %}
+                戻る
+            {% elif current_lang == 'zh' %}
+                返回
+            {% else %}
+                Back
+            {% endif %}
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="map" style="height: 600px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the map
+        const map = L.map('map').setView([35.6762, 139.6503], 7);  // Center on Tokyo
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add markers for each spot
+        const spots = {{ spots|tojson|safe }};
+        spots.forEach(spot => {
+            const marker = L.marker([spot.coordinates.lat, spot.coordinates.lng])
+                .addTo(map)
+                .bindPopup(`
+                    <h5>${spot.name['{{ current_lang }}']}</h5>
+                    <img src="${spot.images[0].url}" style="width: 200px; height: 150px; object-fit: cover; margin-bottom: 10px;">
+                    <p>${spot.description['{{ current_lang }}']}</p>
+                    <a href="/spot/${spot.id}?lang={{ current_lang }}" class="btn btn-primary btn-sm">
+                        {% if current_lang == 'ja' %}
+                            詳細を見る
+                        {% elif current_lang == 'zh' %}
+                            查看详情
+                        {% else %}
+                            View Details
+                        {% endif %}
+                    </a>
+                `);
+        });
+    });
+</script>
+{% endblock %}

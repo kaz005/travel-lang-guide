@@ -11,6 +11,19 @@
     {% endif %}
 </h1>
 
+<div class="text-center mb-4">
+    <a href="{{ url_for('map_view', lang=current_lang) }}" class="btn btn-info">
+        <i class="fas fa-map-marked-alt"></i>
+        {% if current_lang == 'ja' %}
+            地図で見る
+        {% elif current_lang == 'zh' %}
+            查看地图
+        {% else %}
+            View Map
+        {% endif %}
+    </a>
+</div>
+
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for spot in spots %}
     <div class="col">
