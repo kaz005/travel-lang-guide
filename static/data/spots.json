@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "name": {
+      "en": "Tokyo Tower",
+      "ja": "東京タワー",
+      "zh": "东京塔"
+    },
+    "description": {
+      "en": "A communications and observation tower in the Shiba-koen district of Minato, Tokyo.",
+      "ja": "港区芝公園にある通信・観光施設。日本のシンボル的な建造物。",
+      "zh": "位于东京港区芝公园的通信和观光设施，是日本的标志性建筑。"
+    },
+    "image": "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc"
+  },
+  {
+    "id": 2,
+    "name": {
+      "en": "Mount Fuji",
+      "ja": "富士山",
+      "zh": "富士山"
+    },
+    "description": {
+      "en": "Japan's tallest peak and most iconic mountain, an active stratovolcano.",
+      "ja": "日本最高峰の山。活火山であり、日本の象徴的な存在。",
+      "zh": "日本最高的山峰，是一座活火山，是日本的象征。"
+    },
+    "image": "https://images.unsplash.com/photo-1528164344705-47542687000d"
+  }
+]

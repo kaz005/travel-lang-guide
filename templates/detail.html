@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <a href="{{ url_for('index', lang=current_lang) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            {% if current_lang == 'ja' %}
+                戻る
+            {% elif current_lang == 'zh' %}
+                返回
+            {% else %}
+                Back
+            {% endif %}
+        </a>
+    </div>
+
+    <div class="col-12 col-lg-8 mx-auto">
+        <div class="card">
+            <img src="{{ spot.image }}" class="card-img-top" alt="{{ spot.name[current_lang] }}">
+            <div class="card-body">
+                <h2 class="card-title">{{ spot.name[current_lang] }}</h2>
+                <p class="card-text">{{ spot.description[current_lang] }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
