@@ -1,59 +1,115 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12 mb-4">
-        <a href="{{ url_for('index', lang=current_lang) }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i>
-            {% if current_lang == 'ja' %}
-                戻る
-            {% elif current_lang == 'zh' %}
-                返回
-            {% else %}
-                Back
-            {% endif %}
-        </a>
-    </div>
+<!-- OpenStreetMap用のCSSとJavaScript -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <div class="col-12 col-lg-8 mx-auto">
-        <div class="card">
-            <div id="spotGallery" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-indicators">
-                    {% for image in spot.images %}
-                        <button type="button" 
-                                data-bs-target="#spotGallery" 
-                                data-bs-slide-to="{{ loop.index0 }}" 
-                                {% if loop.first %}class="active"{% endif %}
-                                aria-label="Slide {{ loop.index }}">
-                        </button>
-                    {% endfor %}
-                </div>
+<style>
+    #map {
+        height: 300px;
+        width: 100%;
+        z-index: 1;
+    }
+</style>
+
+<div class="container">
+    <nav aria-label="breadcrumb" class="my-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="/?lang={{ current_lang }}">
+                    {% if current_lang == 'ja' %}
+                        ホーム
+                    {% elif current_lang == 'zh' %}
+                        首页
+                    {% else %}
+                        Home
+                    {% endif %}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ spot.name[current_lang] }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">{{ spot.name[current_lang] }}</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div id="spotCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
                 <div class="carousel-inner">
                     {% for image in spot.images %}
-                        <div class="carousel-item {% if loop.first %}active{% endif %}">
-                            <img src="{{ image.url }}" 
-                                 class="d-block w-100" 
-                                 alt="{{ image.caption[current_lang] }}">
-                            <div class="carousel-caption d-none d-md-block">
-                                <p class="mb-0">{{ image.caption[current_lang] }}</p>
-                            </div>
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <img src="{{ image.url }}" class="d-block w-100" alt="{{ image.caption[current_lang] }}">
+                        <div class="carousel-caption d-none d-md-block">
+                            <p>{{ image.caption[current_lang] }}</p>
                         </div>
+                    </div>
                     {% endfor %}
                 </div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#spotGallery" data-bs-slide="prev">
+                {% if spot.images|length > 1 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#spotCarousel" data-bs-slide="prev">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Previous</span>
                 </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#spotGallery" data-bs-slide="next">
+                <button class="carousel-control-next" type="button" data-bs-target="#spotCarousel" data-bs-slide="next">
                     <span class="carousel-control-next-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Next</span>
                 </button>
+                {% endif %}
             </div>
-            <div class="card-body">
-                <h2 class="card-title">{{ spot.name[current_lang] }}</h2>
-                <p class="card-text">{{ spot.description[current_lang] }}</p>
+
+            <div class="description mb-4">
+                <h2>
+                    {% if current_lang == 'ja' %}
+                        説明
+                    {% elif current_lang == 'zh' %}
+                        描述
+                    {% else %}
+                        Description
+                    {% endif %}
+                </h2>
+                <p>{{ spot.description[current_lang] }}</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h3>
+                        {% if current_lang == 'ja' %}
+                            位置情報
+                        {% elif current_lang == 'zh' %}
+                            位置信息
+                        {% else %}
+                            Location
+                        {% endif %}
+                    </h3>
+                    <div id="map" class="mb-3"></div>
+                    <p class="text-muted">
+                        Lat: {{ spot.coordinates.lat }}, Lng: {{ spot.coordinates.lng }}
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const map = L.map('map').setView([{{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    L.marker([{{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}])
+        .addTo(map)
+        .bindPopup('{{ spot.name[current_lang] }}');
+
+    // 地図のサイズを更新
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+});
+</script>
 {% endblock %}

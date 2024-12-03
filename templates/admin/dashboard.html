@@ -2,44 +2,71 @@
 
 {% block content %}
 <div class="container">
+    <nav aria-label="breadcrumb" class="my-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+            <li class="breadcrumb-item active">管理ダッシュボード</li>
+        </ol>
+    </nav>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <a href="{{ url_for('index') }}" class="btn btn-secondary">
-            <i class="fas fa-home"></i> Back to Homepage
-        </a>
-        <h2>Tourist Spots Management</h2>
-        <a href="{{ url_for('admin_create_spot') }}" class="btn btn-success">
-            <i class="fas fa-plus"></i> Add New Spot
-        </a>
+        <h1>観光スポット管理</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSpotModal">
+            <i class="fas fa-plus"></i> 新規スポット追加
+        </button>
     </div>
 
     <div class="table-responsive">
-        <table class="table table-hover">
+        <table class="table table-striped">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name (EN)</th>
-                    <th>Name (JA)</th>
-                    <th>Name (ZH)</th>
-                    <th>Actions</th>
+                    <th>画像</th>
+                    <th>名称</th>
+                    <th>説明</th>
+                    <th>位置情報</th>
+                    <th>操作</th>
                 </tr>
             </thead>
             <tbody>
                 {% for spot in spots %}
                 <tr>
                     <td>{{ spot.id }}</td>
-                    <td>{{ spot.name.en }}</td>
-                    <td>{{ spot.name.ja }}</td>
-                    <td>{{ spot.name.zh }}</td>
                     <td>
-                        <div class="btn-group" role="group">
-                            <a href="{{ url_for('admin_edit_spot', spot_id=spot.id) }}" class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            <button type="button" class="btn btn-danger btn-sm" 
-                                    onclick="confirmDelete({{ spot.id }})">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
+                        {% if spot.images and spot.images[0].url %}
+                        <img src="{{ spot.images[0].url }}" alt="{{ spot.name.ja }}" 
+                             style="width: 100px; height: 75px; object-fit: cover;">
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>🇯🇵 {{ spot.name.ja }}</div>
+                        <div>🇺🇸 {{ spot.name.en }}</div>
+                        <div>🇨🇳 {{ spot.name.zh }}</div>
+                    </td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 300px;">
+                            <div>🇯🇵 {{ spot.description.ja }}</div>
+                            <div>🇺🇸 {{ spot.description.en }}</div>
+                            <div>🇨🇳 {{ spot.description.zh }}</div>
                         </div>
+                    </td>
+                    <td>
+                        <div>Lat: {{ spot.coordinates.lat }}</div>
+                        <div>Lng: {{ spot.coordinates.lng }}</div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info mb-1 edit-button" 
+                                data-spot='{{ spot|tojson }}'>
+                            <i class="fas fa-edit"></i> 編集
+                        </button>
+                        <form action="/admin/spots/{{ spot.id }}/delete" 
+                              method="POST" 
+                              class="d-inline"
+                              onsubmit="return confirm('このスポットを削除してもよろしいですか？')">
+                            <button type="submit" class="btn btn-sm btn-danger mb-1">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}
@@ -48,17 +75,244 @@
     </div>
 </div>
 
+<!-- 新規スポット追加モーダル -->
+<div class="modal fade" id="createSpotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新規スポット追加</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/spots/create" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名称</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇯🇵</span>
+                            <input type="text" class="form-control" name="name_ja" required>
+                        </div>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇺🇸</span>
+                            <input type="text" class="form-control" name="name_en" required>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text">🇨🇳</span>
+                            <input type="text" class="form-control" name="name_zh" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">説明</label>
+                        <div class="mb-2">
+                            <span>🇯🇵</span>
+                            <textarea class="form-control" name="desc_ja" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <span>🇺🇸</span>
+                            <textarea class="form-control" name="desc_en" rows="3" required></textarea>
+                        </div>
+                        <div>
+                            <span>🇨🇳</span>
+                            <textarea class="form-control" name="desc_zh" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">緯度</label>
+                            <input type="number" class="form-control" name="lat" step="any" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">経度</label>
+                            <input type="number" class="form-control" name="lng" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">画像</label>
+                        <div id="createImageInputs">
+                            <div class="image-input mb-3">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="image_urls[]" placeholder="画像URL">
+                                </div>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">🇯🇵</span>
+                                    <input type="text" class="form-control" name="image_captions_ja[]" placeholder="キャプション（日本語）">
+                                </div>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">🇺🇸</span>
+                                    <input type="text" class="form-control" name="image_captions_en[]" placeholder="Caption (English)">
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text">🇨🇳</span>
+                                    <input type="text" class="form-control" name="image_captions_zh[]" placeholder="标题（中文）">
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addImageInput('create')">
+                            <i class="fas fa-plus"></i> 画像を追加
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editSpotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">スポット編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名称</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇯🇵</span>
+                            <input type="text" class="form-control" name="name_ja" required>
+                        </div>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇺🇸</span>
+                            <input type="text" class="form-control" name="name_en" required>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text">🇨🇳</span>
+                            <input type="text" class="form-control" name="name_zh" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">説明</label>
+                        <div class="mb-2">
+                            <span>🇯🇵</span>
+                            <textarea class="form-control" name="desc_ja" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <span>🇺🇸</span>
+                            <textarea class="form-control" name="desc_en" rows="3" required></textarea>
+                        </div>
+                        <div>
+                            <span>🇨🇳</span>
+                            <textarea class="form-control" name="desc_zh" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">緯度</label>
+                            <input type="number" class="form-control" name="lat" step="any" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">経度</label>
+                            <input type="number" class="form-control" name="lng" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">画像</label>
+                        <div id="editImageInputs">
+                            <!-- 既存の画像入力フィールドがここに動的に追加されます -->
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addImageInput('edit')">
+                            <i class="fas fa-plus"></i> 画像を追加
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function confirmDelete(spotId) {
-    if (confirm('Are you sure you want to delete this spot?')) {
-        fetch(`/api/spots/${spotId}`, {
-            method: 'DELETE'
-        }).then(response => {
-            if (response.ok) {
-                window.location.reload();
-            }
-        });
-    }
+function createImageInputHtml(prefix = '', data = null) {
+    return `
+        <div class="image-input mb-3">
+            <div class="input-group mb-2">
+                <input type="text" class="form-control" name="image_urls[]" 
+                       placeholder="画像URL" value="${data ? data.url : ''}">
+                <button type="button" class="btn btn-outline-danger" onclick="removeImageInput(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="input-group mb-2">
+                <span class="input-group-text">🇯🇵</span>
+                <input type="text" class="form-control" name="image_captions_ja[]" 
+                       placeholder="キャプション（日本語）" value="${data ? data.caption.ja : ''}">
+            </div>
+            <div class="input-group mb-2">
+                <span class="input-group-text">🇺🇸</span>
+                <input type="text" class="form-control" name="image_captions_en[]" 
+                       placeholder="Caption (English)" value="${data ? data.caption.en : ''}">
+            </div>
+            <div class="input-group">
+                <span class="input-group-text">🇨🇳</span>
+                <input type="text" class="form-control" name="image_captions_zh[]" 
+                       placeholder="标题（中文）" value="${data ? data.caption.zh : ''}">
+            </div>
+        </div>
+    `;
 }
+
+function addImageInput(type) {
+    const container = document.getElementById(type + 'ImageInputs');
+    container.insertAdjacentHTML('beforeend', createImageInputHtml(type));
+}
+
+function removeImageInput(button) {
+    button.closest('.image-input').remove();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const spot = JSON.parse(this.dataset.spot);
+            const modal = document.getElementById('editSpotModal');
+            const form = modal.querySelector('#editForm');
+            
+            // フォームのアクションを設定
+            form.action = `/admin/spots/${spot.id}/update`;
+            
+            // 基本情報を設定
+            form.querySelector('[name="name_ja"]').value = spot.name.ja;
+            form.querySelector('[name="name_en"]').value = spot.name.en;
+            form.querySelector('[name="name_zh"]').value = spot.name.zh;
+            form.querySelector('[name="desc_ja"]').value = spot.description.ja;
+            form.querySelector('[name="desc_en"]').value = spot.description.en;
+            form.querySelector('[name="desc_zh"]').value = spot.description.zh;
+            form.querySelector('[name="lat"]').value = spot.coordinates.lat;
+            form.querySelector('[name="lng"]').value = spot.coordinates.lng;
+            
+            // 画像入力フィールドをクリアして再構築
+            const imageInputs = document.getElementById('editImageInputs');
+            imageInputs.innerHTML = '';
+            
+            // 既存の画像データを設定
+            if (spot.images && spot.images.length > 0) {
+                spot.images.forEach(image => {
+                    imageInputs.insertAdjacentHTML('beforeend', createImageInputHtml('edit', image));
+                });
+            } else {
+                // 画像がない場合は空の入力フィールドを1つ追加
+                imageInputs.insertAdjacentHTML('beforeend', createImageInputHtml('edit'));
+            }
+            
+            // モーダルを表示
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        });
+    });
+});
 </script>
 {% endblock %}

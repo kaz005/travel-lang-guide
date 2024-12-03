@@ -1,55 +1,87 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <a href="{{ url_for('index', lang=current_lang) }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i>
-            {% if current_lang == 'ja' %}
-                戻る
-            {% elif current_lang == 'zh' %}
-                返回
-            {% else %}
-                Back
-            {% endif %}
-        </a>
-    </div>
-</div>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="my-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="/?lang={{ current_lang }}">
+                    {% if current_lang == 'ja' %}
+                        ホーム
+                    {% elif current_lang == 'zh' %}
+                        首页
+                    {% else %}
+                        Home
+                    {% endif %}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {% if current_lang == 'ja' %}
+                    地図
+                {% elif current_lang == 'zh' %}
+                    地图
+                {% else %}
+                    Map
+                {% endif %}
+            </li>
+        </ol>
+    </nav>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <div id="map" style="height: 600px;"></div>
+    <div class="row g-0">
+        <div class="col-md-3">
+            <div class="list-group" style="height: calc(100vh - 100px); overflow-y: auto;">
+                {% for spot in spots %}
+                <a href="#" class="list-group-item list-group-item-action" 
+                   onclick="focusSpot({{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}, '{{ spot.name[current_lang] }}')">
+                    <h5 class="mb-1">{{ spot.name[current_lang] }}</h5>
+                    <small class="text-muted">{{ spot.description[current_lang]|truncate(100) }}</small>
+                </a>
+                {% endfor %}
             </div>
+        </div>
+        <div class="col-md-9">
+            <div id="map"></div>
         </div>
     </div>
 </div>
 
-<!-- Add Leaflet CSS and JS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize the map
-        const map = L.map('map').setView([35.6762, 139.6503], 7);  // Center on Tokyo
+document.addEventListener('DOMContentLoaded', function() {
+    // 日本の中心あたりを初期表示
+    const center = { lat: 36.2048, lng: 138.2529 };
+    const map = L.map('map', {
+        center: [center.lat, center.lng],
+        zoom: 5,
+        zoomControl: true
+    });
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+    const markers = [];
+    
+    // スポットのマーカーを追加
+    const spots = [
+        {% for spot in spots %}
+        {
+            lat: {{ spot.coordinates.lat }},
+            lng: {{ spot.coordinates.lng }},
+            name: "{{ spot.name[current_lang] }}",
+            description: "{{ spot.description[current_lang]|truncate(100) }}",
+            id: {{ spot.id }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
 
-        // Add markers for each spot
-        const spots = {{ spots|tojson|safe }};
-        spots.forEach(spot => {
-            const marker = L.marker([spot.coordinates.lat, spot.coordinates.lng])
-                .addTo(map)
-                .bindPopup(`
-                    <h5>${spot.name['{{ current_lang }}']}</h5>
-                    <img src="${spot.images[0].url}" style="width: 200px; height: 150px; object-fit: cover; margin-bottom: 10px;">
-                    <p>${spot.description['{{ current_lang }}']}</p>
-                    <a href="/spot/${spot.id}?lang={{ current_lang }}" class="btn btn-primary btn-sm">
+    spots.forEach(spot => {
+        const marker = L.marker([spot.lat, spot.lng])
+            .addTo(map)
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h5>${spot.name}</h5>
+                    <p>${spot.description}</p>
+                    <a href="/spots/${spot.id}?lang={{ current_lang }}" class="btn btn-primary btn-sm">
                         {% if current_lang == 'ja' %}
                             詳細を見る
                         {% elif current_lang == 'zh' %}
@@ -58,8 +90,27 @@
                             View Details
                         {% endif %}
                     </a>
-                `);
-        });
+                </div>
+            `);
+        markers.push(marker);
     });
+
+    // 地図のサイズを更新
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+
+    // スポットにフォーカスする関数
+    window.focusSpot = function(lat, lng) {
+        map.setView([lat, lng], 15);
+        const marker = markers.find(m => {
+            const pos = m.getLatLng();
+            return Math.abs(pos.lat - lat) < 0.0001 && Math.abs(pos.lng - lng) < 0.0001;
+        });
+        if (marker) {
+            marker.openPopup();
+        }
+    };
+});
 </script>
 {% endblock %}
