@@ -7,3 +7,4 @@ __pycache__/
 static/audio_cache/
 .cache/replit/env/
 .cache/replit/nix/env.json
+.env
