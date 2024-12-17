@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="my-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="/?lang={{ current_lang }}">
+                    {% if current_lang == 'ja' %}
+                        ホーム
+                    {% elif current_lang == 'zh' %}
+                        首页
+                    {% else %}
+                        Home
+                    {% endif %}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ spot.name[current_lang] }}</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">{{ spot.name[current_lang] }}</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- 画像カルーセル -->
+            <div id="spotCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for image in spot.images %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <div class="carousel-image-container" style="position: relative; width: 100%; padding-top: 56.25%;">
+                            <img src="{{ image.url }}" 
+                                 class="d-block position-absolute top-0 start-0 w-100 h-100" 
+                                 alt="{{ image.caption[current_lang] }}" 
+                                 style="object-fit: contain; cursor: pointer;"
+                                 onclick="playCurrentDescription({{ loop.index0 }})">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if spot.images|length > 1 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#spotCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Previous</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#spotCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Next</span>
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- 写真の説明文（カルーセルと同期） -->
+            <div id="photoDescriptions" class="mb-4">
+                {% for image in spot.images %}
+                <div class="photo-description card {% if not loop.first %}d-none{% endif %}" data-index="{{ loop.index0 }}">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            {{ image.caption[current_lang] }}
+                            <button class="btn btn-sm btn-light play-caption-button" type="button"
+                                    onclick='playDescription({{ image.caption[current_lang]|tojson|safe }}, "{{ current_lang }}", this)'>
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </h5>
+                        {% if image.description %}
+                        <p class="card-text">
+                            {{ image.description[current_lang] }}
+                            <button class="btn btn-sm btn-light play-description-button" type="button"
+                                    onclick='playDescription({{ image.description[current_lang]|tojson|safe }}, "{{ current_lang }}", this)'>
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>
+                        {% if current_lang == 'ja' %}
+                            基本情報
+                        {% elif current_lang == 'zh' %}
+                            基本信息
+                        {% else %}
+                            Basic Information
+                        {% endif %}
+                    </h3>
+                    <div class="mb-3">
+                        <h4>
+                            {% if current_lang == 'ja' %}
+                                位置情報
+                            {% elif current_lang == 'zh' %}
+                                位置信息
+                            {% else %}
+                                Location
+                            {% endif %}
+                        </h4>
+                        <div id="map" class="mb-3" style="height: 300px;"></div>
+                        <p class="text-muted">
+                            Lat: {{ spot.coordinates.lat }}, Lng: {{ spot.coordinates.lng }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentAudio = null;
+let currentButton = null;
+
+function playCurrentDescription(index) {
+    const descriptionCard = document.querySelector(`.photo-description[data-index="${index}"]`);
+    if (descriptionCard) {
+        const caption = descriptionCard.querySelector('.card-title').textContent.trim();
+        const description = descriptionCard.querySelector('.card-text')?.textContent.trim();
+        const text = description || caption;
+        const img = document.querySelector(`.carousel-item[data-index="${index}"] img`);
+        playDescription(text, "{{ current_lang }}", img);
+    }
+}
+
+async function playDescription(text, lang, button) {
+    try {
+        // 再生中の音声があれば停止
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            if (currentButton) {
+                if (currentButton.tagName === 'BUTTON') {
+                    currentButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+                currentButton.disabled = false;
+            }
+            currentAudio = null;
+            currentButton = null;
+        }
+
+        // 同じボタンがクリックされた場合は停止して終了
+        if (button === currentButton) {
+            return;
+        }
+
+        // ボタンの状態を更新
+        if (button.tagName === 'BUTTON') {
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+        button.disabled = true;
+        currentButton = button;
+
+        // Text-to-Speech APIを呼び出し
+        const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                language: lang
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate speech');
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.audio_url) {
+            throw new Error('Invalid response from server');
+        }
+
+        // 音声を再生
+        currentAudio = new Audio(data.audio_url);
+        await currentAudio.play();
+        if (button.tagName === 'BUTTON') {
+            button.innerHTML = '<i class="fas fa-stop"></i>';
+        }
+        button.disabled = false;
+
+        // 再生終了時の処理
+        currentAudio.onended = () => {
+            if (button.tagName === 'BUTTON') {
+                button.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+            button.disabled = false;
+            currentAudio = null;
+            currentButton = null;
+        };
+
+    } catch (error) {
+        console.error('Error:', error);
+        if (currentButton) {
+            if (currentButton.tagName === 'BUTTON') {
+                currentButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+            currentButton.disabled = false;
+        }
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        currentButton = null;
+        alert('音声の再生に失敗しました。');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // カルーセルアイテムにインデックスを追加
+    document.querySelectorAll('.carousel-item').forEach((item, index) => {
+        item.setAttribute('data-index', index);
+    });
+
+    // 地図の初期化
+    const map = L.map('map').setView([{{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    L.marker([{{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}])
+        .addTo(map)
+        .bindPopup('{{ spot.name[current_lang] }}');
+
+    // 地図のサイズを更新
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+
+    // カルーセルの初期化（自動スライド無効化）
+    const carousel = new bootstrap.Carousel(document.getElementById('spotCarousel'), {
+        interval: false,
+        wrap: true
+    });
+
+    // カルーセルと説明文の同期
+    document.getElementById('spotCarousel').addEventListener('slide.bs.carousel', function(event) {
+        // 現在の説明文を非表示
+        document.querySelectorAll('.photo-description').forEach(desc => {
+            desc.classList.add('d-none');
+        });
+        
+        // 次の説明文を表示
+        const nextIndex = event.to;
+        const nextDesc = document.querySelector(`.photo-description[data-index="${nextIndex}"]`);
+        if (nextDesc) {
+            nextDesc.classList.remove('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}
+

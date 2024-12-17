@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="my-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+            <li class="breadcrumb-item active">管理ダッシュボード</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>観光スポット管理</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="fas fa-plus"></i> 新規スポット追加
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>画像</th>
+                    <th>名称</th>
+                    <th>説明</th>
+                    <th>位置情報</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for spot in spots %}
+                <tr>
+                    <td>{{ spot.id }}</td>
+                    <td>
+                        {% if spot.images and spot.images[0].url %}
+                        <img src="{{ spot.images[0].url }}" alt="{{ spot.name.ja }}" 
+                             style="width: 160px; height: 120px; object-fit: cover;">
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>🇯🇵 {{ spot.name.ja }}</div>
+                        <div>🇺🇸 {{ spot.name.en }}</div>
+                        <div>🇨🇳 {{ spot.name.zh }}</div>
+                    </td>
+                    <td>
+                        <div class="text-truncate" style="max-width: 300px;">
+                            <div>🇯🇵 {{ spot.description.ja }}</div>
+                            <div>🇺🇸 {{ spot.description.en }}</div>
+                            <div>🇨🇳 {{ spot.description.zh }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div>Lat: {{ spot.coordinates.lat }}</div>
+                        <div>Lng: {{ spot.coordinates.lng }}</div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info mb-1 edit-button" 
+                                data-spot='{{ spot|tojson }}'>
+                            <i class="fas fa-edit"></i> 編集
+                        </button>
+                        <form action="/admin/spots/{{ spot.id }}/delete" 
+                              method="POST" 
+                              class="d-inline"
+                              onsubmit="return confirm('このスポットを削除してもよろしいですか？')">
+                            <button type="submit" class="btn btn-sm btn-danger mb-1">
+                                <i class="fas fa-trash"></i> 削除
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 新規作成モーダル -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新規スポット作成</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm" action="/admin/spots/create" method="POST">
+                    <!-- 基本情報 -->
+                    <div class="mb-3">
+                        <label class="form-label">名称</label>
+                        <div class="mb-2">
+                            <span>🇯🇵</span>
+                            <input type="text" class="form-control" name="name_ja" required>
+                        </div>
+                        <div class="mb-2">
+                            <span>🇺🇸</span>
+                            <input type="text" class="form-control" name="name_en" required>
+                        </div>
+                        <div>
+                            <span>🇨🇳</span>
+                            <input type="text" class="form-control" name="name_zh" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">説明</label>
+                        <div class="mb-2">
+                            <span>🇯🇵</span>
+                            <textarea class="form-control" name="desc_ja" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <span>🇺🇸</span>
+                            <textarea class="form-control" name="desc_en" rows="3" required></textarea>
+                        </div>
+                        <div>
+                            <span>🇨🇳</span>
+                            <textarea class="form-control" name="desc_zh" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">位置情報</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="number" class="form-control" name="lat" step="any" placeholder="緯度" required>
+                            </div>
+                            <div class="col">
+                                <input type="number" class="form-control" name="lng" step="any" placeholder="経度" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 画像入力フィールド -->
+                    <div class="mb-3">
+                        <label class="form-label">画像</label>
+                        <div id="createImageInputs">
+                            <div class="image-input mb-3">
+                                <div class="mb-2">
+                                    <select class="form-select mb-2" name="image_types[]">
+                                        <option value="external">外部URL</option>
+                                        <option value="local">ローカルファイル</option>
+                                    </select>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="image_urls[]" placeholder="画像URL または /static/images/ファイル名 (例: spot1.jpg)">
+                                        <button type="button" class="btn btn-outline-danger" onclick="removeImageInput(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">キャプション</label>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">🇯🇵</span>
+                                        <input type="text" class="form-control" name="image_captions_ja[]" placeholder="キャプション（日本語）">
+                                    </div>
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">🇺🇸</span>
+                                        <input type="text" class="form-control" name="image_captions_en[]" placeholder="Caption (English)">
+                                    </div>
+                                    <div class="input-group">
+                                        <span class="input-group-text">🇨🇳</span>
+                                        <input type="text" class="form-control" name="image_captions_zh[]" placeholder="标题（中文）">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label">説明文</label>
+                                    <div class="mb-2">
+                                        <span>🇯🇵</span>
+                                        <textarea class="form-control" name="image_descriptions_ja[]" rows="3" placeholder="写真の説明（日本語）"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span>🇺🇸</span>
+                                        <textarea class="form-control" name="image_descriptions_en[]" rows="3" placeholder="Photo description (English)"></textarea>
+                                    </div>
+                                    <div>
+                                        <span>🇨🇳</span>
+                                        <textarea class="form-control" name="image_descriptions_zh[]" rows="3" placeholder="照片描述（中文）"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" onclick="addImageInput('create')">
+                            <i class="fas fa-plus"></i> 画像を追加
+                        </button>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" class="btn btn-primary">作成</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal fade" id="editSpotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">スポット編集</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名称</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇯🇵</span>
+                            <input type="text" class="form-control" name="name_ja" required>
+                        </div>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">🇺🇸</span>
+                            <input type="text" class="form-control" name="name_en" required>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text">🇨🇳</span>
+                            <input type="text" class="form-control" name="name_zh" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">説明</label>
+                        <div class="mb-2">
+                            <span>🇯🇵</span>
+                            <textarea class="form-control" name="desc_ja" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <span>🇺🇸</span>
+                            <textarea class="form-control" name="desc_en" rows="3" required></textarea>
+                        </div>
+                        <div>
+                            <span>🇨🇳</span>
+                            <textarea class="form-control" name="desc_zh" rows="3" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">緯度</label>
+                            <input type="number" class="form-control" name="lat" step="any" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">経度</label>
+                            <input type="number" class="form-control" name="lng" step="any" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">画像</label>
+                        <div id="editImageInputs">
+                            <!-- 既存の画像入力フィールドがここに動的に追加されます -->
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary" onclick="addImageInput('edit')">
+                            <i class="fas fa-plus"></i> 画像を追加
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function addImageInput(type) {
+    const template = `
+        <div class="image-input mb-3">
+            <div class="mb-2">
+                <select class="form-select mb-2" name="image_types[]">
+                    <option value="external">外部URL</option>
+                    <option value="local">ローカルファイル</option>
+                </select>
+                <div class="input-group">
+                    <input type="text" class="form-control" name="image_urls[]" placeholder="画像URL または /static/images/ファイル名 (例: spot1.jpg)">
+                    <button type="button" class="btn btn-outline-danger" onclick="removeImageInput(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">キャプション</label>
+                <div class="input-group mb-2">
+                    <span class="input-group-text">🇯🇵</span>
+                    <input type="text" class="form-control" name="image_captions_ja[]" placeholder="キャプション（日本語）">
+                </div>
+                <div class="input-group mb-2">
+                    <span class="input-group-text">🇺🇸</span>
+                    <input type="text" class="form-control" name="image_captions_en[]" placeholder="Caption (English)">
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text">🇨🇳</span>
+                    <input type="text" class="form-control" name="image_captions_zh[]" placeholder="标题（中文）">
+                </div>
+            </div>
+            <div>
+                <label class="form-label">説明文</label>
+                <div class="mb-2">
+                    <span>🇯🇵</span>
+                    <textarea class="form-control" name="image_descriptions_ja[]" rows="3" placeholder="写真の説明（日本語）"></textarea>
+                </div>
+                <div class="mb-2">
+                    <span>🇺����</span>
+                    <textarea class="form-control" name="image_descriptions_en[]" rows="3" placeholder="Photo description (English)"></textarea>
+                </div>
+                <div>
+                    <span>🇨🇳</span>
+                    <textarea class="form-control" name="image_descriptions_zh[]" rows="3" placeholder="照片描述（中文）"></textarea>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById(type + 'ImageInputs').insertAdjacentHTML('beforeend', template);
+}
+
+function removeImageInput(button) {
+    button.closest('.image-input').remove();
+}
+
+// 編集モーダルを設定する関数
+function setupEditModal(spotData) {
+    const form = document.getElementById('editForm');
+    form.action = `/admin/spots/${spotData.id}/update`;
+
+    // 基本情報を設定
+    form.querySelector('[name="name_ja"]').value = spotData.name.ja;
+    form.querySelector('[name="name_en"]').value = spotData.name.en;
+    form.querySelector('[name="name_zh"]').value = spotData.name.zh;
+    form.querySelector('[name="desc_ja"]').value = spotData.description.ja;
+    form.querySelector('[name="desc_en"]').value = spotData.description.en;
+    form.querySelector('[name="desc_zh"]').value = spotData.description.zh;
+    form.querySelector('[name="lat"]').value = spotData.coordinates.lat;
+    form.querySelector('[name="lng"]').value = spotData.coordinates.lng;
+
+    // 画像入力フィールドをクリア
+    const imageInputs = document.getElementById('editImageInputs');
+    imageInputs.innerHTML = '';
+
+    // 既存の画像情報を設定
+    if (spotData.images && spotData.images.length > 0) {
+        spotData.images.forEach(image => {
+            const imageInput = document.createElement('div');
+            imageInput.className = 'image-input mb-3';
+            imageInput.innerHTML = `
+                <div class="mb-2">
+                    <select class="form-select mb-2" name="image_types[]">
+                        <option value="external" ${image.type === 'external' ? 'selected' : ''}>外部URL</option>
+                        <option value="local" ${image.type === 'local' ? 'selected' : ''}>ローカルファイル</option>
+                    </select>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="image_urls[]" value="${image.url}" placeholder="画像URL">
+                        <button type="button" class="btn btn-outline-danger" onclick="removeImageInput(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">キャプション</label>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">🇯🇵</span>
+                        <input type="text" class="form-control" name="image_captions_ja[]" value="${image.caption.ja}" placeholder="キャプション（日本語）">
+                    </div>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">🇺🇸</span>
+                        <input type="text" class="form-control" name="image_captions_en[]" value="${image.caption.en}" placeholder="Caption (English)">
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text">🇨🇳</span>
+                        <input type="text" class="form-control" name="image_captions_zh[]" value="${image.caption.zh}" placeholder="标题（中文）">
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">説明文</label>
+                    <div class="mb-2">
+                        <span>🇯🇵</span>
+                        <textarea class="form-control" name="image_descriptions_ja[]" rows="3" placeholder="写真の説明（日本語）">${image.description ? image.description.ja : ''}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <span>🇺🇸</span>
+                        <textarea class="form-control" name="image_descriptions_en[]" rows="3" placeholder="Photo description (English)">${image.description ? image.description.en : ''}</textarea>
+                    </div>
+                    <div>
+                        <span>🇨🇳</span>
+                        <textarea class="form-control" name="image_descriptions_zh[]" rows="3" placeholder="照片描述（中文）">${image.description ? image.description.zh : ''}</textarea>
+                    </div>
+                </div>
+            `;
+            imageInputs.appendChild(imageInput);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-button').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const spot = JSON.parse(this.dataset.spot);
+            setupEditModal(spot);
+            const modal = document.getElementById('editSpotModal');
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

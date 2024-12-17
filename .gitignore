@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+*.bak
+static/audio_cache/
+.cache/replit/env/
+.cache/replit/nix/env.json

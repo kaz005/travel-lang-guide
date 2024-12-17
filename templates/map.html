@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <nav aria-label="breadcrumb" class="my-4 mx-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="/?lang={{ current_lang }}">
+                    {% if current_lang == 'ja' %}
+                        ホーム
+                    {% elif current_lang == 'zh' %}
+                        首页
+                    {% else %}
+                        Home
+                    {% endif %}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {% if current_lang == 'ja' %}
+                    地図
+                {% elif current_lang == 'zh' %}
+                    地图
+                {% else %}
+                    Map
+                {% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <div class="row g-0">
+        <div class="col-md-3">
+            <div class="list-group mx-3" style="height: calc(100vh - 160px); overflow-y: auto;">
+                {% for spot in spots %}
+                <a href="#" class="list-group-item list-group-item-action" 
+                   onclick="focusSpot({{ spot.coordinates.lat }}, {{ spot.coordinates.lng }}, '{{ spot.name[current_lang] }}')">
+                    <h5 class="mb-1">{{ spot.name[current_lang] }}</h5>
+                    <small class="text-muted">{{ spot.description[current_lang]|truncate(100) }}</small>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-9 px-3">
+            <div id="map"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 言語設定を取得
+    const current_lang = "{{ current_lang }}";
+    
+    // スポットデータを取得
+    const spots = {{ spots|tojson }};
+    console.log('Loaded spots:', spots);  // デバッグ用
+    
+    // 地図の初期化（石垣島付近を中心に）
+    const map = L.map('map').setView([24.34114, 124.1596], 12);
+
+    // タイルレイヤーを追加
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // マーカーを追加
+    const markers = [];
+    spots.forEach(spot => {
+        console.log('Adding marker for spot:', spot);  // デバッグ用
+        const marker = L.marker([spot.coordinates.lat, spot.coordinates.lng])
+            .addTo(map)
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h5>${spot.name[current_lang]}</h5>
+                    <p>${spot.description[current_lang]}</p>
+                    <a href="/spots/${spot.id}?lang=${current_lang}" class="btn btn-primary btn-sm">
+                        {% if current_lang == 'ja' %}
+                            詳細を見る
+                        {% elif current_lang == 'zh' %}
+                            查看详情
+                        {% else %}
+                            View Details
+                        {% endif %}
+                    </a>
+                </div>
+            `);
+        markers.push({
+            marker: marker,
+            lat: spot.coordinates.lat,
+            lng: spot.coordinates.lng
+        });
+    });
+
+    // スポットにフォーカスする関数
+    window.focusSpot = function(lat, lng) {
+        console.log('Focusing spot:', lat, lng);  // デバッグ用
+        console.log('Available markers:', markers);  // デバッグ用
+        const target = markers.find(m => {
+            console.log('Comparing:', m.lat, m.lng, 'with', lat, lng);  // デバッグ用
+            const latDiff = Math.abs(m.lat - lat);
+            const lngDiff = Math.abs(m.lng - lng);
+            console.log('Differences:', latDiff, lngDiff);  // デバッグ用
+            return latDiff < 0.0001 && lngDiff < 0.0001;
+        });
+        if (target) {
+            console.log('Found target:', target);  // デバッグ用
+            map.setView([lat, lng], 15);
+            target.marker.openPopup();
+        } else {
+            console.log('No target found');  // デバッグ用
+        }
+    };
+
+    // 地図のサイズを更新
+    map.invalidateSize();
+});
+</script>
+{% endblock %}

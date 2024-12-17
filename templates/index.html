@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{{ _('観光スポット一覧') }}</h2>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="lead">{{ _('各スポットの詳細情報を見るには画像をクリックしてください。') }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for spot in spots %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card">
+                {% if spot.images and spot.images[0] %}
+                <img src="{{ spot.images[0].url if not spot.images[0].url.startswith('/static/') else spot.images[0].url }}" 
+                     class="card-img-top" 
+                     alt="{{ spot.name[lang] }}"
+                     style="width: 100%; height: 160px; object-fit: cover;"
+                     onclick="playDescription('{{ spot.description[lang] }}', '{{ lang }}', this)">
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center" style="height: 160px;">
+                    <i class="fas fa-image text-muted fa-3x"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ spot.name[lang] }}</h5>
+                    <p class="card-text">{{ spot.description[lang] | truncate(100) }}</p>
+                    <div class="text-end">
+                        <a href="/spots/{{ spot.id }}?lang={{ lang }}" class="btn btn-outline-primary">
+                            {{ _('詳細を見る') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+let currentAudio = null;
+let currentButton = null;
+
+async function playDescription(text, lang, button) {
+    try {
+        // 再生中の音声があれば停止
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            if (currentButton) {
+                currentButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+                currentButton.disabled = false;
+            }
+            currentAudio = null;
+            currentButton = null;
+        }
+
+        // 同じボタンがクリックされた場合は停止して完了
+        if (button === currentButton) {
+            return;
+        }
+
+        // ボタンの状態更新
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        currentButton = button;
+
+        // Text-to-Speech APIを呼び出し
+        const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: text,
+                language: lang
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate speech');
+        }
+
+        const data = await response.json();
+        if (!data.success || !data.audio_url) {
+            throw new Error('Invalid response from server');
+        }
+
+        // 音声を再生
+        currentAudio = new Audio(data.audio_url);
+        await currentAudio.play();
+        button.innerHTML = '<i class="fas fa-stop"></i>';
+        button.disabled = false;
+
+        // 再生完了時の処理
+        currentAudio.onended = () => {
+            button.innerHTML = '<i class="fas fa-volume-up"></i>';
+            button.disabled = false;
+            currentAudio = null;
+            currentButton = null;
+        };
+
+    } catch (error) {
+        console.error('Error:', error);
+        if (currentButton) {
+            currentButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+            currentButton.disabled = false;
+        }
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        currentButton = null;
+        alert('音声の再生に失敗しました。');
+    }
+}
+</script>
+{% endblock %}
