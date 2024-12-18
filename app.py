@@ -107,14 +107,14 @@ async def index(request: Request, lang: str = 'ja'):
             "request": request,
             "spots": spots,
             "lang": lang,
-            "_": lambda text: get_translation(text, lang)  # 翻訳関数をテンプレートに渡す
+            "_": lambda text: get_translation(text, lang)
         }
     )
 
 @app.get("/spots/{spot_id}", response_class=HTMLResponse)
 async def spot_detail(request: Request, spot_id: int, lang: str = 'ja'):
     spots = TouristSpot.load_spots()
-    spot = next((spot for spot in spots if spot.id == spot_id), None)
+    spot = next((spot for spot in spots if spot['id'] == spot_id), None)
     if not spot:
         raise HTTPException(status_code=404, detail="Spot not found")
     
@@ -131,16 +131,15 @@ async def spot_detail(request: Request, spot_id: int, lang: str = 'ja'):
 @app.get("/map", response_class=HTMLResponse)
 async def map_view(request: Request, lang: str = 'ja'):
     spots = TouristSpot.load_spots()
-    spots_data = [spot.to_dict() for spot in spots]
-    print(f"[DEBUG] Loaded spots for map: {spots_data}")  # デバッグ用
+    print(f"[DEBUG] Loaded spots for map: {spots}")  # デバッグ用
     return templates.TemplateResponse(
         "map.html",
         {
             "request": request,
-            "spots": spots_data,
+            "spots": spots,
             "current_lang": lang,
             "lang": lang,
-            "_": lambda text: get_translation(text, lang)  # 翻訳関数を追加
+            "_": lambda text: get_translation(text, lang)
         }
     )
 
@@ -151,10 +150,10 @@ async def admin_dashboard(request: Request, lang: str = 'ja'):
         "admin/dashboard.html",
         {
             "request": request,
-            "spots": jsonable_encoder([spot.to_dict() for spot in spots]),
+            "spots": jsonable_encoder(spots),
             "current_lang": lang,
             "lang": lang,
-            "_": lambda text: get_translation(text, lang)  # 翻訳関数を追加
+            "_": lambda text: get_translation(text, lang)
         }
     )
 

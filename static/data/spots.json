@@ -64,8 +64,8 @@
     },
     "images": [
       {
-        "url": "http://yaenavi.com/wp-content/uploads/islandimages/1244-01_l.jpg",
-        "type": "external",
+        "url": "/static/images/1244-01_l.jpg",
+        "type": "local",
         "caption": {
           "ja": "赤馬の碑",
           "en": "Statue of the red horse",
